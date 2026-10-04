@@ -1,0 +1,10 @@
+# Written by Claude Code each time it loads a mod; regenerated for each build.
+.claude-plugin/types/
+*/.claude-plugin/types/
+
+node_modules/
+.DS_Store
+Thumbs.db
+
+.vscode/
+.claude/

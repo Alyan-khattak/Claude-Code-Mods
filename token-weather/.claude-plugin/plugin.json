@@ -1,0 +1,18 @@
+{
+  "name": "token-weather",
+  "version": "0.1.0",
+  "description": "A one-line forecast of your context window above the prompt: Clear to Storm, with a sparkline and cost.",
+  "author": {
+    "name": "Alyan Khattak",
+    "url": "https://github.com/Alyan-khattak"
+  },
+  "repository": "https://github.com/Alyan-khattak/claude-code-mods",
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "context",
+    "tokens",
+    "band"
+  ],
+  "types": "./types/index.d.ts"
+}

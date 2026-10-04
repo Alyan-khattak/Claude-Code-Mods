@@ -1,0 +1,19 @@
+{
+  "name": "limit-meter",
+  "version": "0.1.0",
+  "description": "Your plan's 5-hour and weekly usage limits above the prompt: percent used, time to reset, used today, with warnings at 75% and 90%.",
+  "author": {
+    "name": "Alyan Khattak",
+    "url": "https://github.com/Alyan-khattak"
+  },
+  "repository": "https://github.com/Alyan-khattak/claude-code-mods",
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "limits",
+    "usage",
+    "rate-limit",
+    "band"
+  ],
+  "types": "./types/index.d.ts"
+}

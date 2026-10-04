@@ -1,0 +1,18 @@
+{
+  "name": "replay-theater",
+  "version": "0.1.0",
+  "description": "Records every edit Claude makes in a turn and lets you step through the diffs with /replay.",
+  "author": {
+    "name": "Alyan Khattak",
+    "url": "https://github.com/Alyan-khattak"
+  },
+  "repository": "https://github.com/Alyan-khattak/claude-code-mods",
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "diff",
+    "review",
+    "pane"
+  ],
+  "types": "./types/index.d.ts"
+}

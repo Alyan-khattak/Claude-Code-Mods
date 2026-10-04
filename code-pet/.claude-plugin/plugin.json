@@ -1,0 +1,13 @@
+{
+  "name": "code-pet",
+  "version": "0.1.0",
+  "description": "A tiny ASCII pet above your prompt (=^.^=) that cheers when tests pass, worries when commands fail, naps when you are idle, and levels up as you work.",
+  "author": {
+    "name": "Alyan Khattak",
+    "url": "https://github.com/Alyan-khattak"
+  },
+  "repository": "https://github.com/Alyan-khattak/claude-code-mods",
+  "license": "MIT",
+  "keywords": ["mod", "pet", "fun", "tests", "band"],
+  "types": "./types/index.d.ts"
+}

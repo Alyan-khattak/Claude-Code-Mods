@@ -1,0 +1,57 @@
+{
+  "name": "alyan-mods",
+  "owner": {
+    "name": "Alyan Khattak",
+    "url": "https://github.com/Alyan-khattak"
+  },
+  "metadata": {
+    "description": "Eight Claude Code mods: undo to any prompt, a usage-limit meter, an agent farm, a context forecast, a destructive-command guard, an edit replay, a files-seen list, a session journal and a code pet."
+  },
+  "plugins": [
+    {
+      "name": "waypoint",
+      "source": "./waypoint",
+      "description": "Per-prompt snapshots of your whole project; preview and restore to any earlier prompt, Bash changes included."
+    },
+    {
+      "name": "limit-meter",
+      "source": "./limit-meter",
+      "description": "Your plan's 5-hour and weekly usage limits above the prompt, with time to reset, used today, and warnings."
+    },
+    {
+      "name": "token-weather",
+      "source": "./token-weather",
+      "description": "A one-line forecast of your context window above the prompt: Clear to Storm, with a sparkline and cost."
+    },
+    {
+      "name": "blast-radius",
+      "source": "./blast-radius",
+      "description": "Holds destructive shell commands, shows what they would delete or overwrite, and asks Proceed or Cancel."
+    },
+    {
+      "name": "replay-theater",
+      "source": "./replay-theater",
+      "description": "Records every edit Claude makes in a turn and lets you step through the diffs with /replay."
+    },
+    {
+      "name": "files-seen",
+      "source": "./files-seen",
+      "description": "A live list of every file Claude read or edited this session, in a pane and the status line."
+    },
+    {
+      "name": "session-journal",
+      "source": "./session-journal",
+      "description": "Writes a markdown log of every prompt, changed file and command, with a /standup summary."
+    },
+    {
+      "name": "agent-farm",
+      "source": "./agent-farm",
+      "description": "Your subagents and agent teams as cute farm critters: each works the field with its tool, rests when done, and plays when you hover it."
+    },
+    {
+      "name": "code-pet",
+      "source": "./code-pet",
+      "description": "A tiny ASCII pet above your prompt (=^.^=) that cheers when tests pass, worries when commands fail, naps when you're idle, and levels up as you work."
+    }
+  ]
+}

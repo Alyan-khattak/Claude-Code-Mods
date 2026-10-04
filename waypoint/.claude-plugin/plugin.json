@@ -1,0 +1,18 @@
+{
+  "name": "waypoint",
+  "version": "0.1.0",
+  "description": "Per-prompt snapshots of your whole project, so you can preview and restore to any earlier prompt, Bash changes included.",
+  "author": {
+    "name": "Alyan Khattak",
+    "url": "https://github.com/Alyan-khattak"
+  },
+  "repository": "https://github.com/Alyan-khattak/claude-code-mods",
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "undo",
+    "checkpoint",
+    "git"
+  ],
+  "types": "./types/index.d.ts"
+}
