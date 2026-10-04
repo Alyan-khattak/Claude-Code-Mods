@@ -9,7 +9,7 @@ MODS="waypoint limit-meter token-weather blast-radius replay-theater files-seen 
 if [ "$1" = "--local" ]; then
   claude plugin marketplace add "$(cd "$(dirname "$0")" && pwd)"
 else
-  claude plugin marketplace add Alyan-khattak/claude-code-mods
+  claude plugin marketplace add Alyan-khattak/Claude-Code-Mods
 fi
 
 for m in $MODS; do

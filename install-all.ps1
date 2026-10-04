@@ -10,7 +10,7 @@ $mods = @("waypoint", "limit-meter", "token-weather", "blast-radius", "replay-th
 if ($Local) {
   claude plugin marketplace add $PSScriptRoot
 } else {
-  claude plugin marketplace add Alyan-khattak/claude-code-mods
+  claude plugin marketplace add Alyan-khattak/Claude-Code-Mods
 }
 
 foreach ($m in $mods) {

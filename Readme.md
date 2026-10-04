@@ -17,30 +17,97 @@ A mod is a small TypeScript module that runs inside your Claude Code session. On
 
 ## Install
 
-You need **Claude Code 2.1.287 or newer** (`claude --version`). Waypoint also needs **git** on your PATH.
-
-**Everything at once** (from a clone of this repo):
-
-```powershell
-# Windows (PowerShell)
-./install-all.ps1
-```
+**Requirement:** Claude Code 2.1.287 or newer.
 
 ```sh
-# macOS / Linux
+claude --version
+```
+
+If not installed: [claude.ai/code](https://claude.ai/code)
+
+Waypoint also needs **git** on your PATH.
+
+---
+
+### Option A — Install everything at once (recommended)
+
+**macOS / Linux:**
+
+```sh
+git clone https://github.com/Alyan-khattak/Claude-Code-Mods
+cd Claude-Code-Mods
 sh install-all.sh
 ```
 
-**Or pick mods one by one**, inside Claude Code:
+**Windows (PowerShell):**
+
+```powershell
+git clone https://github.com/Alyan-khattak/Claude-Code-Mods
+cd Claude-Code-Mods
+./install-all.ps1
+```
+
+Then inside Claude Code:
 
 ```
-/plugin marketplace add Alyan-khattak/claude-code-mods
-/plugin install waypoint@alyan-mods
-/plugin install token-weather@alyan-mods
 /reload-plugins
 ```
 
-The other names are `limit-meter`, `blast-radius`, `replay-theater`, `files-seen`, `session-journal` and `code-pet`. Mods installed this way are for your user, so they load in every project. Remove one with `/plugin uninstall <name>@alyan-mods`.
+---
+
+### Option B — Pick mods one by one (no clone needed)
+
+Inside Claude Code, run:
+
+```
+/plugin marketplace add Alyan-khattak/Claude-Code-Mods
+```
+
+Then install whichever you want:
+
+```
+/plugin install waypoint@alyan-mods
+/plugin install limit-meter@alyan-mods
+/plugin install token-weather@alyan-mods
+/plugin install blast-radius@alyan-mods
+/plugin install replay-theater@alyan-mods
+/plugin install files-seen@alyan-mods
+/plugin install session-journal@alyan-mods
+/plugin install code-pet@alyan-mods
+```
+
+Then:
+
+```
+/reload-plugins
+```
+
+---
+
+### Verify it worked
+
+```
+/plugin list
+```
+
+Should show eight `@alyan-mods` entries. Then try:
+
+```
+/waypoints        → opens the checkpoint timeline
+/seen             → files Claude touched this session
+/pet              → pat your code pet
+/limits           → usage meter
+```
+
+---
+
+### Remove a mod
+
+```
+/plugin uninstall <name>@alyan-mods
+```
+
+Mods installed this way are for your user, so they load in every project.
 
 > A mod runs on your machine with the same access Claude Code has. Read the code before installing mods from anyone, including me. Everything here is in plain TypeScript under each folder's `hooks/`.
 
@@ -220,8 +287,8 @@ Code Pet, Limit Meter, Token Weather and Replay Theater all draw above the promp
 ## Development
 
 ```sh
-git clone https://github.com/Alyan-khattak/claude-code-mods
-cd claude-code-mods
+git clone https://github.com/Alyan-khattak/Claude-Code-Mods
+cd Claude-Code-Mods
 
 claude --plugin-dir ./waypoint          # try one live; every save hot-reloads
 claude plugin validate ./waypoint       # checks the manifest, hooks and state
@@ -232,13 +299,13 @@ Each mod is a plugin folder: `.claude-plugin/plugin.json`, `hooks/hooks.json` na
 
 To ship an update, bump `version` in that mod's `plugin.json` and push. Users get it with `claude plugin update <name>@alyan-mods` and `/reload-plugins`.
 
-**Status.** Built and tested against Claude Code 2.1.289: every mod passes `claude plugin validate` and `claude plugin test`, and they were exercised in real sessions on Linux. Windows paths and Windows delete commands are handled in the code; if something misbehaves on Windows or macOS, please [open an issue](https://github.com/Alyan-khattak/claude-code-mods/issues) with the output of `claude --debug`.
+**Status.** Built and tested against Claude Code 2.1.289: every mod passes `claude plugin validate` and `claude plugin test`, and they were exercised in real sessions on Linux. Windows paths and Windows delete commands are handled in the code; if something misbehaves on Windows or macOS, please [open an issue](https://github.com/Alyan-khattak/Claude-Code-Mods/issues) with the output of `claude --debug`.
 
 ## For agents
 
 If a user asks you to install, configure or debug these mods, these facts apply.
 
-- Marketplace: `Alyan-khattak/claude-code-mods`, name `alyan-mods`. Plugins: `waypoint`, `limit-meter`, `token-weather`, `blast-radius`, `replay-theater`, `files-seen`, `session-journal`, `code-pet`. Install with `claude plugin install <name>@alyan-mods --scope user`, then a new session or `/reload-plugins`.
+- Marketplace: `Alyan-khattak/Claude-Code-Mods`, name `alyan-mods`. Plugins: `waypoint`, `limit-meter`, `token-weather`, `blast-radius`, `replay-theater`, `files-seen`, `session-journal`, `code-pet`. Install with `claude plugin install <name>@alyan-mods --scope user`, then a new session or `/reload-plugins`.
 - Type: Claude Code plugins with one hooks module each (`hooks/register.tsx`). No MCP servers, no skills, no network calls.
 - Commands they register: `/waypoints [<n> | restore <n> [before] | save <label>]`, `/waypoints-open <n>`, `/waypoints-restore <n> [before]`, `/waypoints-save <label>`, `/limits`, `/replay`, `/seen`, `/standup [yesterday|YYYY-MM-DD]`, `/journal`, `/pet [name <name> | species <kind> | stats]`.
 - Processes they run: Waypoint runs `git` against a bare repository at `$WAYPOINT_HOME` or `~/.claude/waypoint/<project>-<hash>` with the project as work tree (`add -A`, `commit`, `diff`, `read-tree -u --reset` on restore). Blast Radius runs read-only `git` commands (`status`, `diff`, `log`, `clean -n`, `rev-parse`) for its preview.
