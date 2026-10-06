@@ -184,7 +184,7 @@ export function registerRoadTrip(on: On): void {
   })
 
   // ── Pane close ────────────────────────────────────────────────────────────
-  on('ui.close', { requestId: PANE }, async ($, e, next) => {
+  on('ui.close', { id: PANE }, async ($, e, next) => {
     gameLoopCancel?.()
     gameLoopCancel = undefined
     if (game) await saveProfile($, game)
