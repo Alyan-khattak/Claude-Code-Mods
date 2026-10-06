@@ -128,9 +128,9 @@ export function registerRoadTrip(on: On): void {
     const cols = e.props.bodyColumns
     const rows = e.props.scroll.bodyRows
 
-    if (cols < 36 || rows < 8) {
+    if (cols < 36 || rows < 5) {
       const { Text } = $.ui.resolve(e)
-      return <Text>Make this panel a little bigger to drive</Text>
+      return <Text>Drag this pane taller to play  (cols={cols} rows={rows})</Text>
     }
 
     const newRC = cols
