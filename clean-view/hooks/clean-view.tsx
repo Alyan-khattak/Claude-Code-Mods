@@ -192,7 +192,8 @@ export function registerCleanView(on: On): void {
       isCollapsed: false,
     }))
 
-    return { result: `Planned ${steps.length} steps. The first one has started.` }
+    const lines = steps.map((t, i) => `  ${i === 0 ? '▶' : '○'} ${t.name}`).join('\n')
+    return { result: `Planned ${steps.length} steps. The first one has started.\n\n${lines}` }
   })
 
   // ── report_progress tool ───────────────────────────────────────────────────
@@ -208,7 +209,16 @@ export function registerCleanView(on: On): void {
       return { ...cl, tasks: applyProgress(cl.tasks, taskName, pct), phase: 'working' as Phase }
     })
 
-    return { result: `Progress noted: ${pct}%.` }
+    const cl2 = await read($, checklistAtom)
+    let statusLines = ''
+    if (cl2 !== null) {
+      statusLines = '\n\n' + cl2.tasks.map(t => {
+        const icon = t.status === 'done' ? '✓' : t.status === 'active' ? '▶' : '○'
+        const label = t.status === 'done' ? '[done]' : t.status === 'active' ? `[${t.hasReported ? `${t.percent}%` : 'working'}]` : '[up next]'
+        return `  ${icon} ${t.name}  ${label}`
+      }).join('\n')
+    }
+    return { result: `Progress noted: ${pct}%.${statusLines}` }
   })
 
   // ── General tool.call: plan gate + failure tracking + needs-you clearing ──
