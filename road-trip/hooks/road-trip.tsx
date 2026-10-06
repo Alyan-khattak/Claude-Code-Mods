@@ -100,7 +100,7 @@ export function registerRoadTrip(on: On): void {
     }
 
     // Open pane (responds instantly — answer before opening)
-    const openResult = await $.ui.open({ id: PANE, title: 'Road Trip', focus: true, rows: 30, columns: 110 })
+    const openResult = await $.ui.open({ id: PANE, title: 'Road Trip', focus: true, closeOnEscape: true, rows: 30, columns: 110 })
     if (!openResult.isPlaced) {
       $.ui.toast('Road Trip needs a little more room: widen the window')
       return { text: 'Pane not placed (window too small).' }
@@ -169,7 +169,6 @@ export function registerRoadTrip(on: On): void {
       if (g.phase === 'arrived') void $.ui.close({ id: PANE })
       else garageBuy(g)
     }
-
     return (
       <Box flexDirection="column">
         {h(elements.Raster, { key: 'game', columns: rasterCols, rows: rasterRows, cells: renderFrame(g) })}
