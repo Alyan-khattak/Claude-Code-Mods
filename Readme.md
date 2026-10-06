@@ -1,6 +1,6 @@
 # Claude Code Mods by Alyan
 
-Eight mods for [Claude Code](https://code.claude.com): undo to any prompt, a usage-limit meter, a live context forecast, a guard for destructive commands, a replay of every edit, a list of every file Claude touched, a daily journal of your sessions, and a code pet.
+Nine mods for [Claude Code](https://code.claude.com): undo to any prompt, a usage-limit meter, a live context forecast, a guard for destructive commands, a replay of every edit, a list of every file Claude touched, a daily journal of your sessions, a code pet, and a clean checklist view that hides tool noise.
 
 A mod is a small TypeScript module that runs inside your Claude Code session. Once installed, these run on their own in every project: there is nothing to start.
 
@@ -14,6 +14,7 @@ A mod is a small TypeScript module that runs inside your Claude Code session. On
 | **[Files Seen](#files-seen)** | Every file Claude read or edited this session, grouped and counted. | `/seen` |
 | **[Code Pet](#code-pet)** | A tiny ASCII pet above your prompt (`=^.^=`): cheers when tests pass, worries when commands fail, naps when you're idle, and levels up as you work. | automatic, `/pet` |
 | **[Session Journal](#session-journal)** | A markdown log of each prompt, changed file and command, per day. | `/standup`, `/journal` |
+| **[Clean View](#clean-view)** | Hides all tool rows and command output while Claude works. Shows a plain-English checklist above the prompt instead. Off by default. | `/simple on`, `/simple off` |
 
 ## Install
 
@@ -74,6 +75,7 @@ Then install whichever you want:
 /plugin install files-seen@alyan-mods
 /plugin install session-journal@alyan-mods
 /plugin install code-pet@alyan-mods
+/plugin install clean-view@alyan-mods
 ```
 
 Then:
@@ -90,13 +92,14 @@ Then:
 /plugin list
 ```
 
-Should show eight `@alyan-mods` entries. Then try:
+Should show nine `@alyan-mods` entries. Then try:
 
 ```
 /waypoints        → opens the checkpoint timeline
 /seen             → files Claude touched this session
 /pet              → pat your code pet
 /limits           → usage meter
+/simple on        → enable clean checklist view
 ```
 
 ---
@@ -253,6 +256,49 @@ A tiny pet that lives above your prompt and reacts to your session. It's plain A
 
 **Settings.** `CODE_PET_STYLE=emoji` switches to emoji (🐱 🎉 💤); `CODE_PET=status` shows it in the status line instead of above the prompt; `CODE_PET=off` hides it.
 
+## Clean View
+
+Clean View hides every tool row, file diff and command output while Claude works, and replaces them with a plain-English checklist above the prompt.
+
+**Off by default.** Turn it on with `/simple on` (or the toggle button in the band). Turn it off with `/simple off`. The setting persists across sessions.
+
+When active, the band shows a title for the current task, a phase badge, and a numbered step list:
+
+```
+● Working on it                                           [Simple ON]
+  ✓  Read your notes
+  ▶  Build the pricing section  ████████░░  60%
+     Add the contact form
+     Polish the footer
+```
+
+**Phase badges:**
+
+| Badge | Meaning |
+| --- | --- |
+| `● Working on it` | Claude is running tools |
+| `⚡ Needs you` | Waiting for your input or permission |
+| `✕ Stuck` | Consecutive tool failures |
+| `◼ Stopped` | Session ended or rate-limited |
+| `✓ Done` | Turn finished (collapses after 5 s) |
+
+**How the checklist is built.** Claude uses two custom tools:
+
+- `plan_steps` — declares the steps for a turn before doing anything else
+- `report_progress` — marks a step done or sets its percent complete
+
+A system-prompt instruction tells Claude to call `plan_steps` at the start of every turn. If it skips this, its first real tool call is denied with a reminder to plan first (a few built-ins like `TodoWrite` and `AskUserQuestion` are exempt from the gate).
+
+The band title comes from a background Haiku call at the start of each turn, which rewrites Claude's first message into a short human-readable label.
+
+**Commands:**
+
+| Command | Effect |
+| --- | --- |
+| `/simple on` | Enable Clean View |
+| `/simple off` | Disable Clean View |
+| `/simple` | Toggle |
+
 ## Session Journal
 
 After every turn, appends an entry to `.claude/journal/YYYY-MM-DD.md` in your project:
@@ -284,6 +330,8 @@ Add `.claude/journal/` to your `.gitignore` if you don't want it committed. `SES
 
 Code Pet, Limit Meter, Token Weather and Replay Theater all draw above the prompt, and Blast Radius does too when the terminal is too narrow for its pane. Each one draws its own line and passes the rest on, so they stack instead of hiding each other.
 
+Clean View also draws above the prompt, but when it is active it suppresses the raw tool rows that the other mods sit alongside — the other mods' own bands still render normally.
+
 ## Development
 
 ```sh
@@ -305,13 +353,14 @@ To ship an update, bump `version` in that mod's `plugin.json` and push. Users ge
 
 If a user asks you to install, configure or debug these mods, these facts apply.
 
-- Marketplace: `Alyan-khattak/Claude-Code-Mods`, name `alyan-mods`. Plugins: `waypoint`, `limit-meter`, `token-weather`, `blast-radius`, `replay-theater`, `files-seen`, `session-journal`, `code-pet`. Install with `claude plugin install <name>@alyan-mods --scope user`, then a new session or `/reload-plugins`.
+- Marketplace: `Alyan-khattak/Claude-Code-Mods`, name `alyan-mods`. Plugins: `waypoint`, `limit-meter`, `token-weather`, `blast-radius`, `replay-theater`, `files-seen`, `session-journal`, `code-pet`, `clean-view`. Install with `claude plugin install <name>@alyan-mods --scope user`, then a new session or `/reload-plugins`.
 - Type: Claude Code plugins with one hooks module each (`hooks/register.tsx`). No MCP servers, no skills, no network calls.
-- Commands they register: `/waypoints [<n> | restore <n> [before] | save <label>]`, `/waypoints-open <n>`, `/waypoints-restore <n> [before]`, `/waypoints-save <label>`, `/limits`, `/replay`, `/seen`, `/standup [yesterday|YYYY-MM-DD]`, `/journal`, `/pet [name <name> | species <kind> | stats]`.
+- Commands they register: `/waypoints [<n> | restore <n> [before] | save <label>]`, `/waypoints-open <n>`, `/waypoints-restore <n> [before]`, `/waypoints-save <label>`, `/limits`, `/replay`, `/seen`, `/standup [yesterday|YYYY-MM-DD]`, `/journal`, `/pet [name <name> | species <kind> | stats]`, `/simple [on|off]`.
 - Processes they run: Waypoint runs `git` against a bare repository at `$WAYPOINT_HOME` or `~/.claude/waypoint/<project>-<hash>` with the project as work tree (`add -A`, `commit`, `diff`, `read-tree -u --reset` on restore). Blast Radius runs read-only `git` commands (`status`, `diff`, `log`, `clean -n`, `rev-parse`) for its preview.
 - Files they write: Session Journal writes `.claude/journal/YYYY-MM-DD.md` in the project (or `$SESSION_JOURNAL_DIR`). Waypoint writes only inside its snapshot folder, except when the user restores.
 - Environment variables (all optional): `WAYPOINT_HOME`, `SESSION_JOURNAL_DIR`, `BLAST_RADIUS=off`, `LIMIT_METER=band|status|off`, `CODE_PET=band|status|off`, `CODE_PET_STYLE=ascii|emoji`.
-- Verify: `claude plugin list` shows the eight `@alyan-mods` entries. In a new session, `/journal` answers with a path, and `/waypoints` opens the timeline. If nothing appears, run `claude plugin validate <plugin folder>` and `claude --debug`.
+- Clean View: off by default; enable with `/simple on`. Registers tools `mcp__clean-view__plan_steps` and `mcp__clean-view__report_progress` for Claude to call. Injects a system-prompt instruction requiring `plan_steps` before the first real tool call each turn. Persists enabled state in `$.store`.
+- Verify: `claude plugin list` shows the nine `@alyan-mods` entries. In a new session, `/journal` answers with a path, and `/waypoints` opens the timeline. If nothing appears, run `claude plugin validate <plugin folder>` and `claude --debug`.
 
 ## Credits
 

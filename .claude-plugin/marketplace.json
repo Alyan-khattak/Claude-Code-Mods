@@ -5,7 +5,7 @@
     "url": "https://github.com/Alyan-khattak"
   },
   "metadata": {
-    "description": "Eight Claude Code mods: undo to any prompt, a usage-limit meter, an agent farm, a context forecast, a destructive-command guard, an edit replay, a files-seen list, a session journal and a code pet."
+    "description": "Nine Claude Code mods: undo to any prompt, a usage-limit meter, an agent farm, a context forecast, a destructive-command guard, an edit replay, a files-seen list, a session journal, a code pet, and a clean checklist view."
   },
   "plugins": [
     {
@@ -52,6 +52,11 @@
       "name": "code-pet",
       "source": "./code-pet",
       "description": "A tiny ASCII pet above your prompt (=^.^=) that cheers when tests pass, worries when commands fail, naps when you're idle, and levels up as you work."
+    },
+    {
+      "name": "clean-view",
+      "source": "./clean-view",
+      "description": "Hides tool rows and shows a plain-English checklist above the prompt. Start with /simple on."
     }
   ]
 }

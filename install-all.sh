@@ -4,7 +4,7 @@
 #       sh install-all.sh --local  (from a clone: installs from this folder)
 set -e
 
-MODS="waypoint limit-meter token-weather blast-radius replay-theater files-seen session-journal agent-farm code-pet"
+MODS="waypoint limit-meter token-weather blast-radius replay-theater files-seen session-journal agent-farm code-pet clean-view"
 
 if [ "$1" = "--local" ]; then
   claude plugin marketplace add "$(cd "$(dirname "$0")" && pwd)"
