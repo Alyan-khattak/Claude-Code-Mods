@@ -1,0 +1,6 @@
+{
+  "name": "road-trip",
+  "version": "0.1.0",
+  "description": "A top-down driving game above the prompt. Task coins rain in as Claude works. /roadtrip to play.",
+  "types": "./types/index.d.ts"
+}

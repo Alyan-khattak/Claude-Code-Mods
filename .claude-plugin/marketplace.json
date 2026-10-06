@@ -5,7 +5,7 @@
     "url": "https://github.com/Alyan-khattak"
   },
   "metadata": {
-    "description": "Nine Claude Code mods: undo to any prompt, a usage-limit meter, an agent farm, a context forecast, a destructive-command guard, an edit replay, a files-seen list, a session journal, a code pet, and a clean checklist view."
+    "description": "Ten Claude Code mods: undo to any prompt, a usage-limit meter, an agent farm, a context forecast, a destructive-command guard, an edit replay, a files-seen list, a session journal, a code pet, a clean checklist view, and a driving game."
   },
   "plugins": [
     {
@@ -57,6 +57,11 @@
       "name": "clean-view",
       "source": "./clean-view",
       "description": "Hides tool rows and shows a plain-English checklist above the prompt. Start with /simple on."
+    },
+    {
+      "name": "road-trip",
+      "source": "./road-trip",
+      "description": "Top-down driving game above the prompt. Task coins rain in as Claude works. /roadtrip to play."
     }
   ]
 }

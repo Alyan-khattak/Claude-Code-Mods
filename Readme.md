@@ -1,6 +1,6 @@
 # Claude Code Mods by Alyan
 
-Nine mods for [Claude Code](https://code.claude.com): undo to any prompt, a usage-limit meter, a live context forecast, a guard for destructive commands, a replay of every edit, a list of every file Claude touched, a daily journal of your sessions, a code pet, and a clean checklist view that hides tool noise.
+Ten mods for [Claude Code](https://code.claude.com): undo to any prompt, a usage-limit meter, a live context forecast, a guard for destructive commands, a replay of every edit, a list of every file Claude touched, a daily journal of your sessions, a code pet, a clean checklist view, and a driving game that plays while Claude works.
 
 A mod is a small TypeScript module that runs inside your Claude Code session. Once installed, these run on their own in every project: there is nothing to start.
 
@@ -15,6 +15,7 @@ A mod is a small TypeScript module that runs inside your Claude Code session. On
 | **[Code Pet](#code-pet)** | A tiny ASCII pet above your prompt (`=^.^=`): cheers when tests pass, worries when commands fail, naps when you're idle, and levels up as you work. | automatic, `/pet` |
 | **[Session Journal](#session-journal)** | A markdown log of each prompt, changed file and command, per day. | `/standup`, `/journal` |
 | **[Clean View](#clean-view)** | Hides all tool rows and command output while Claude works. Shows a plain-English checklist above the prompt instead. Off by default. | `/simple on`, `/simple off` |
+| **[Road Trip](#road-trip)** | Top-down text driving game in a pane. Task coins rain down every time Claude finishes a step. An Arrived card pops when the job is done. | `/roadtrip` |
 
 ## Install
 
@@ -76,6 +77,7 @@ Then install whichever you want:
 /plugin install session-journal@alyan-mods
 /plugin install code-pet@alyan-mods
 /plugin install clean-view@alyan-mods
+/plugin install road-trip@alyan-mods
 ```
 
 Then:
@@ -92,7 +94,7 @@ Then:
 /plugin list
 ```
 
-Should show nine `@alyan-mods` entries. Then try:
+Should show ten `@alyan-mods` entries. Then try:
 
 ```
 /waypoints        → opens the checkpoint timeline
@@ -100,6 +102,7 @@ Should show nine `@alyan-mods` entries. Then try:
 /pet              → pat your code pet
 /limits           → usage meter
 /simple on        → enable clean checklist view
+/roadtrip         → open the driving game
 ```
 
 ---
@@ -324,6 +327,52 @@ After every turn, appends an entry to `.claude/journal/YYYY-MM-DD.md` in your pr
 
 Add `.claude/journal/` to your `.gitignore` if you don't want it committed. `SESSION_JOURNAL_DIR` writes it somewhere else (absolute, or relative to the project). Waypoint never snapshots the journal, so a restore never rolls it back.
 
+## Road Trip
+
+A top-down text driving game that lives in a pane beside your transcript. Waiting on a long Claude job becomes fun instead of dead time — and the game is wired directly to what Claude is doing.
+
+**Opening it.** Type `/roadtrip` (or `/roadtrip play`). The pane opens with a "Get ready… 3, 2, 1, GO!" countdown. `/roadtrip off` hides it; `/roadtrip on` brings it back. Closing the pane saves your progress automatically.
+
+**Controls** (pane must be focused — click it or Tab to it first):
+
+| Key | Action |
+| --- | --- |
+| **A** | Switch one lane left |
+| **D** | Switch one lane right |
+| **P** | Pause / unpause |
+| **G** | Open the garage |
+| **B** | Buy or drive a car (in garage); Close (on Arrived card) |
+
+**The road.** Three lanes scroll toward your car. Avoid striped barriers, cones and pothole — hitting one causes a "Flat tire!" and restarts the run. At least one lane is always clear. Collect coin rows for 1 coin each.
+
+**Task coins.** Every time Claude finishes a step (a Clean View checklist step, a completed to-do, or a TaskUpdate), an orange `($)` task coin worth **10 coins** rolls onto the road. Up to 3 queue at a time.
+
+**Quiz gates.** Every 25–30 seconds a question about Claude or running a business appears at the top of the road. A colored gate rolls down with one answer per lane: drive through the correct one for **+15 coins, +50 XP**, and a few seconds of **NITRO** (faster speed, smash obstacles for 2 coins each).
+
+**Arrived card.** When Claude finishes a job, the game pauses on an Arrived card showing distance, coins, quiz score and your level. Press **A** to keep driving, **G** for the garage, or **B** to close.
+
+**The garage.** Five cars unlock with coins and levels:
+
+| Car | Price | Level | Perk |
+| --- | --- | --- | --- |
+| Starter Hatch | Free | 1 | None |
+| Side Hustle Coupe | 60 | 2 | Coin magnet: also grabs coins in the adjacent lane |
+| Agency Wagon | 180 | 3 | Shield: survives one hit per run |
+| Founder GT | 450 | 5 | Double coins on everything |
+| Unicorn Hyper | 1,000 | 8 | All perks + nitro start |
+
+**XP and levels.** Distance and quiz answers earn XP. The level bar is in the HUD. Level 10 unlocks the Unicorn Hyper. Bank, owned cars, XP and best distance persist across sessions via `$.store`.
+
+**Other commands:**
+
+| Command | Effect |
+| --- | --- |
+| `/roadtrip` | Open the game |
+| `/roadtrip off` | Hide (persists) |
+| `/roadtrip on` | Re-enable |
+| `/roadtrip retro on` | Switch to 1980s arcade look (black road, neon magenta edges, cyan lane lines, phosphor green HUD) |
+| `/roadtrip retro off` | Back to default colors |
+
 ---
 
 ## Mods that share the space above the prompt
@@ -353,14 +402,14 @@ To ship an update, bump `version` in that mod's `plugin.json` and push. Users ge
 
 If a user asks you to install, configure or debug these mods, these facts apply.
 
-- Marketplace: `Alyan-khattak/Claude-Code-Mods`, name `alyan-mods`. Plugins: `waypoint`, `limit-meter`, `token-weather`, `blast-radius`, `replay-theater`, `files-seen`, `session-journal`, `code-pet`, `clean-view`. Install with `claude plugin install <name>@alyan-mods --scope user`, then a new session or `/reload-plugins`.
+- Marketplace: `Alyan-khattak/Claude-Code-Mods`, name `alyan-mods`. Plugins: `waypoint`, `limit-meter`, `token-weather`, `blast-radius`, `replay-theater`, `files-seen`, `session-journal`, `code-pet`, `clean-view`, `road-trip`. Install with `claude plugin install <name>@alyan-mods --scope user`, then a new session or `/reload-plugins`.
 - Type: Claude Code plugins with one hooks module each (`hooks/register.tsx`). No MCP servers, no skills, no network calls.
-- Commands they register: `/waypoints [<n> | restore <n> [before] | save <label>]`, `/waypoints-open <n>`, `/waypoints-restore <n> [before]`, `/waypoints-save <label>`, `/limits`, `/replay`, `/seen`, `/standup [yesterday|YYYY-MM-DD]`, `/journal`, `/pet [name <name> | species <kind> | stats]`, `/simple [on|off]`.
+- Commands they register: `/waypoints [<n> | restore <n> [before] | save <label>]`, `/waypoints-open <n>`, `/waypoints-restore <n> [before]`, `/waypoints-save <label>`, `/limits`, `/replay`, `/seen`, `/standup [yesterday|YYYY-MM-DD]`, `/journal`, `/pet [name <name> | species <kind> | stats]`, `/simple [on|off]`, `/roadtrip [on|off|retro on|off]`.
 - Processes they run: Waypoint runs `git` against a bare repository at `$WAYPOINT_HOME` or `~/.claude/waypoint/<project>-<hash>` with the project as work tree (`add -A`, `commit`, `diff`, `read-tree -u --reset` on restore). Blast Radius runs read-only `git` commands (`status`, `diff`, `log`, `clean -n`, `rev-parse`) for its preview.
 - Files they write: Session Journal writes `.claude/journal/YYYY-MM-DD.md` in the project (or `$SESSION_JOURNAL_DIR`). Waypoint writes only inside its snapshot folder, except when the user restores.
 - Environment variables (all optional): `WAYPOINT_HOME`, `SESSION_JOURNAL_DIR`, `BLAST_RADIUS=off`, `LIMIT_METER=band|status|off`, `CODE_PET=band|status|off`, `CODE_PET_STYLE=ascii|emoji`.
 - Clean View: off by default; enable with `/simple on`. Registers tools `mcp__clean-view__plan_steps` and `mcp__clean-view__report_progress` for Claude to call. Injects a system-prompt instruction requiring `plan_steps` before the first real tool call each turn. Persists enabled state in `$.store`.
-- Verify: `claude plugin list` shows the nine `@alyan-mods` entries. In a new session, `/journal` answers with a path, and `/waypoints` opens the timeline. If nothing appears, run `claude plugin validate <plugin folder>` and `claude --debug`.
+- Verify: `claude plugin list` shows the ten `@alyan-mods` entries. In a new session, `/journal` answers with a path, and `/waypoints` opens the timeline. If nothing appears, run `claude plugin validate <plugin folder>` and `claude --debug`.
 
 ## Credits
 
