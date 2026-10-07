@@ -5,7 +5,7 @@
     "url": "https://github.com/Alyan-khattak"
   },
   "metadata": {
-    "description": "Ten Claude Code mods: undo to any prompt, a usage-limit meter, an agent farm, a context forecast, a destructive-command guard, an edit replay, a files-seen list, a session journal, a code pet, a clean checklist view, and a driving game."
+    "description": "Eleven Claude Code mods: undo to any prompt, a usage-limit meter, an agent farm, a context forecast, a destructive-command guard, an edit replay, a files-seen list, a session journal, a code pet, a clean checklist view, a driving game, and a live agent dock."
   },
   "plugins": [
     {
@@ -62,6 +62,11 @@
       "name": "road-trip",
       "source": "./road-trip",
       "description": "Top-down driving game above the prompt. Task coins rain in as Claude works. /roadtrip to play."
+    },
+    {
+      "name": "agent-dock",
+      "source": "./agent-dock",
+      "description": "Live panel showing parallel helper agents. Set team size 1–100, watch cards fill in real-time. /dock to open."
     }
   ]
 }

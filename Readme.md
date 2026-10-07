@@ -1,6 +1,6 @@
 # Claude Code Mods by Alyan
 
-Ten mods for [Claude Code](https://code.claude.com): undo to any prompt, a usage-limit meter, a live context forecast, a guard for destructive commands, a replay of every edit, a list of every file Claude touched, a daily journal of your sessions, a code pet, a clean checklist view, and a driving game that plays while Claude works.
+Eleven mods for [Claude Code](https://code.claude.com): undo to any prompt, a usage-limit meter, a live context forecast, a guard for destructive commands, a replay of every edit, a list of every file Claude touched, a daily journal of your sessions, a code pet, a clean checklist view, a driving game that plays while Claude works, and a live agent dock that splits every request across N parallel helpers.
 
 A mod is a small TypeScript module that runs inside your Claude Code session. Once installed, these run on their own in every project: there is nothing to start.
 
@@ -16,6 +16,7 @@ A mod is a small TypeScript module that runs inside your Claude Code session. On
 | **[Session Journal](#session-journal)** | A markdown log of each prompt, changed file and command, per day. | `/standup`, `/journal` |
 | **[Clean View](#clean-view)** | Hides all tool rows and command output while Claude works. Shows a plain-English checklist above the prompt instead. Off by default. | `/simple on`, `/simple off` |
 | **[Road Trip](#road-trip)** | Top-down text driving game in a pane. Task coins rain down every time Claude finishes a step. An Arrived card pops when the job is done. | `/roadtrip` |
+| **[Agent Dock](#agent-dock)** | Splits every request across N parallel helper agents (1–100). A live pane shows each helper as a card with a progress meter and timer. Combines results when done. | `/dock`, `/dock N` |
 
 ## Install
 
@@ -78,6 +79,7 @@ Then install whichever you want:
 /plugin install code-pet@alyan-mods
 /plugin install clean-view@alyan-mods
 /plugin install road-trip@alyan-mods
+/plugin install agent-dock@alyan-mods
 ```
 
 Then:
@@ -94,7 +96,7 @@ Then:
 /plugin list
 ```
 
-Should show ten `@alyan-mods` entries. Then try:
+Should show eleven `@alyan-mods` entries. Then try:
 
 ```
 /waypoints        → opens the checkpoint timeline
@@ -103,6 +105,8 @@ Should show ten `@alyan-mods` entries. Then try:
 /limits           → usage meter
 /simple on        → enable clean checklist view
 /roadtrip         → open the driving game
+/dock             → open Agent Dock
+/dock 10          → set team size to 10
 ```
 
 ---
@@ -373,6 +377,50 @@ A top-down text driving game that lives in a pane beside your transcript. Waitin
 | `/roadtrip retro on` | Switch to 1980s arcade look (black road, neon magenta edges, cyan lane lines, phosphor green HUD) |
 | `/roadtrip retro off` | Back to default colors |
 
+## Agent Dock
+
+Agent Dock splits every request you send across N parallel helper agents and shows each one as a live card in a pane.
+
+**Opening it.** Type `/dock`. The pane docks beside the transcript. `/dock 10` sets the team size to 10 and opens the pane.
+
+**Team Size.** Click a preset (1 · 3 · 5 · 10 · 20 · 50 · 100) or type `/dock N` for any number from 1 to 100. At size 1, Claude decides as normal and Agent Dock stays out of the way. Sizes above 20 ask you to confirm in the pane and reset to 1 after the session ends.
+
+**What you see while helpers run:**
+
+```
+◆  A G E N T   D O C K                                           ● L I V E
+────────────────────────────────────────────────────────────────────────────
+T E A M  S I Z E   ╭ 1  3  5  10 [20] 50  100 ╮
+Splits each request across 20 helpers  ·  20 at a time  ·  Fast & Cheap
+
+M I S S I O N   Research bakery pricing                         45%   1:12
+● 12 working    ○ 8 queued    ✓ 0 done    ✕ 0 stuck
+
+╭──────────────────────────────╮ ╭──────────────────────────────╮
+│ PP  Price check: Panera  0:41 │ │ CB  Price check: Crumbl  0:38 │
+│     ━━━━━━━━━━╌╌╌╌╌╌╌╌  60%  │ │     ━━━━━━━━━━━━━━━━━━  100% │
+╰──────────────────────────────╯ ╰──────────────────────────────╯
+```
+
+Each card shows a two-letter badge, the helper's task name (3–5 words), a running timer and a progress meter. Queued cards are dimmed. When there are more than 12 helpers the cards shrink to small tiles so 50 or 100 still fit.
+
+**Helper model.** A toggle in the pane switches between **Fast & Cheap** (Haiku 4.5 — fast, uses less of your plan) and **Same as you** (your current model). Fast & Cheap is the default.
+
+**Done.** When all helpers finish, the dock shows a summary line:
+
+```
+✓ 20 agents finished "Research bakery pricing" in 2m 14s
+```
+
+**Folded.** Type `/dock` while the pane is open to fold it to a status-bar badge: `◆ 12 working · 8 queued · 0 done`. Type `/dock` again to reopen.
+
+**Commands:**
+
+| Command | Effect |
+| --- | --- |
+| `/dock` | Toggle pane open / fold to badge |
+| `/dock N` | Set team size to N (1–100) and open pane |
+
 ---
 
 ## Mods that share the space above the prompt
@@ -402,14 +450,15 @@ To ship an update, bump `version` in that mod's `plugin.json` and push. Users ge
 
 If a user asks you to install, configure or debug these mods, these facts apply.
 
-- Marketplace: `Alyan-khattak/Claude-Code-Mods`, name `alyan-mods`. Plugins: `waypoint`, `limit-meter`, `token-weather`, `blast-radius`, `replay-theater`, `files-seen`, `session-journal`, `code-pet`, `clean-view`, `road-trip`. Install with `claude plugin install <name>@alyan-mods --scope user`, then a new session or `/reload-plugins`.
+- Marketplace: `Alyan-khattak/Claude-Code-Mods`, name `alyan-mods`. Plugins: `waypoint`, `limit-meter`, `token-weather`, `blast-radius`, `replay-theater`, `files-seen`, `session-journal`, `code-pet`, `clean-view`, `road-trip`, `agent-dock`. Install with `claude plugin install <name>@alyan-mods --scope user`, then a new session or `/reload-plugins`.
 - Type: Claude Code plugins with one hooks module each (`hooks/register.tsx`). No MCP servers, no skills, no network calls.
-- Commands they register: `/waypoints [<n> | restore <n> [before] | save <label>]`, `/waypoints-open <n>`, `/waypoints-restore <n> [before]`, `/waypoints-save <label>`, `/limits`, `/replay`, `/seen`, `/standup [yesterday|YYYY-MM-DD]`, `/journal`, `/pet [name <name> | species <kind> | stats]`, `/simple [on|off]`, `/roadtrip [on|off|retro on|off]`.
+- Commands they register: `/waypoints [<n> | restore <n> [before] | save <label>]`, `/waypoints-open <n>`, `/waypoints-restore <n> [before]`, `/waypoints-save <label>`, `/limits`, `/replay`, `/seen`, `/standup [yesterday|YYYY-MM-DD]`, `/journal`, `/pet [name <name> | species <kind> | stats]`, `/simple [on|off]`, `/roadtrip [on|off|retro on|off]`, `/dock [N]`.
 - Processes they run: Waypoint runs `git` against a bare repository at `$WAYPOINT_HOME` or `~/.claude/waypoint/<project>-<hash>` with the project as work tree (`add -A`, `commit`, `diff`, `read-tree -u --reset` on restore). Blast Radius runs read-only `git` commands (`status`, `diff`, `log`, `clean -n`, `rev-parse`) for its preview.
 - Files they write: Session Journal writes `.claude/journal/YYYY-MM-DD.md` in the project (or `$SESSION_JOURNAL_DIR`). Waypoint writes only inside its snapshot folder, except when the user restores.
 - Environment variables (all optional): `WAYPOINT_HOME`, `SESSION_JOURNAL_DIR`, `BLAST_RADIUS=off`, `LIMIT_METER=band|status|off`, `CODE_PET=band|status|off`, `CODE_PET_STYLE=ascii|emoji`.
 - Clean View: off by default; enable with `/simple on`. Registers tools `mcp__clean-view__plan_steps` and `mcp__clean-view__report_progress` for Claude to call. Injects a system-prompt instruction requiring `plan_steps` before the first real tool call each turn. Persists enabled state in `$.store`.
-- Verify: `claude plugin list` shows the ten `@alyan-mods` entries. In a new session, `/journal` answers with a path, and `/waypoints` opens the timeline. If nothing appears, run `claude plugin validate <plugin folder>` and `claude --debug`.
+- Agent Dock: team size 1 by default (off). `/dock N` sets size and opens pane. At size > 1, injects a system-prompt instruction splitting every request across exactly N parallel Agent calls. Caps Agent calls at N per turn, sends one nudge if fewer than N were used. Sizes > 20 reset to 1 on session start. Writes live agent counts to `~/.claude/ai-employee-kit-data/agents-now/<session_id>.json`. Requires `clean-view` installed (uses its `report_progress` tool to track helper progress).
+- Verify: `claude plugin list` shows the eleven `@alyan-mods` entries. In a new session, `/journal` answers with a path, and `/waypoints` opens the timeline. If nothing appears, run `claude plugin validate <plugin folder>` and `claude --debug`.
 
 ## Credits
 

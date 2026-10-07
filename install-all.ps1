@@ -5,7 +5,7 @@
 param([switch]$Local)
 
 $ErrorActionPreference = "Stop"
-$mods = @("waypoint", "limit-meter", "token-weather", "blast-radius", "replay-theater", "files-seen", "session-journal", "agent-farm", "code-pet", "clean-view", "road-trip")
+$mods = @("waypoint", "limit-meter", "token-weather", "blast-radius", "replay-theater", "files-seen", "session-journal", "agent-farm", "code-pet", "clean-view", "road-trip", "agent-dock")
 
 if ($Local) {
   claude plugin marketplace add $PSScriptRoot

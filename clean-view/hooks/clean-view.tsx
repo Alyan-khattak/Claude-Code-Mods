@@ -198,7 +198,8 @@ export function registerCleanView(on: On): void {
 
   // ── report_progress tool ───────────────────────────────────────────────────
 
-  on('tool.call', { tool: 'mcp__clean-view__report_progress' }, async ($, e) => {
+  on('tool.call', { tool: 'mcp__clean-view__report_progress' }, async ($, e, next) => {
+    if (e.agentId !== undefined) return next(e)  // agent-dock handles helper progress
     const input = e as unknown as { task?: unknown; percent?: unknown }
     const taskName = String(input.task ?? '')
     const raw = Number(input.percent ?? 0)

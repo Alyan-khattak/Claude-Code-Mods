@@ -1,0 +1,6 @@
+{
+  "name": "agent-dock",
+  "version": "0.1.0",
+  "description": "Live panel showing parallel helper agents — set team size, watch cards fill in real-time",
+  "types": "./types/index.d.ts"
+}
