@@ -1,6 +1,11 @@
 export type HelperStatus = 'queued' | 'working' | 'done' | 'stuck'
 export type DockPhase = 'idle' | 'live' | 'done'
 
+export interface AgentRole {
+  name: string
+  instructions: string
+}
+
 export interface Helper {
   id: string
   description: string
@@ -23,6 +28,7 @@ export interface DockState {
   isFolded: boolean
   pendingBigTeam: number | null
   stuckCount: number
+  roles: AgentRole[]
 }
 
 declare module 'claude-code' {

@@ -2,7 +2,8 @@ import { atom, read, update } from 'claude-code'
 import type { On } from 'claude-code'
 import {
   parseSize, jobName, initials, colorFor,
-  splitInstruction, nudgeText, badgeText, summaryLine,
+  splitInstructionWithRoles, nextRole, roleInitials,
+  nudgeText, badgeText, summaryLine,
   meterBar, fmtTime, fmtTimer, overallPct,
 } from './dock-logic'
 
@@ -13,6 +14,7 @@ let dataDir = ''
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 type HelperStatus = 'queued' | 'working' | 'done' | 'stuck'
+type AgentRole = { name: string; instructions: string }
 type Helper = {
   id: string
   description: string
@@ -35,6 +37,7 @@ type DockState = {
   isFolded: boolean
   pendingBigTeam: number | null
   stuckCount: number
+  roles: AgentRole[]
 }
 
 // ── Atoms ─────────────────────────────────────────────────────────────────────
@@ -50,6 +53,7 @@ const dockAtom = atom({ plugin: 'agent-dock', key: 'dock' } as const, {
   isFolded: false,
   pendingBigTeam: null as number | null,
   stuckCount: 0,
+  roles: [] as AgentRole[],
 } satisfies DockState)
 
 const tickAtom = atom({ plugin: 'agent-dock', key: 'tick' } as const, 0)
@@ -102,11 +106,13 @@ export function registerDock(on: On): void {
     try {
       const size = await $.store.get({ key: 'dock-team-size' })
       const hm = await $.store.get({ key: 'dock-helper-model' })
+      const storedRoles = await $.store.get({ key: 'dock-roles' })
       const storedSize = typeof size?.value === 'number' ? size.value : 1
       // Big team sizes (>20) never carry over
       const safeSize = storedSize > 20 ? 1 : storedSize
       const helperModel = hm?.value === 'same' ? 'same' as const : 'haiku' as const
-      await update($, dockAtom, s => ({ ...s, teamSize: safeSize, helperModel }))
+      const roles = Array.isArray(storedRoles?.value) ? storedRoles.value as AgentRole[] : []
+      await update($, dockAtom, s => ({ ...s, teamSize: safeSize, helperModel, roles }))
     } catch { /* keep defaults */ }
 
     try {
@@ -127,6 +133,30 @@ export function registerDock(on: On): void {
   on('command.run', { command: 'dock' }, async ($, e) => {
     const args = (e.args ?? '').trim()
     const state = await read($, dockAtom)
+
+    // /dock role N name ["instructions"] — assign role to a slot
+    if (args.startsWith('role ')) {
+      const rest = args.slice(5).trim()
+      const numMatch = rest.match(/^(\d+)\s+(.+)$/)
+      if (!numMatch) return { text: 'Usage: /dock role N rolename ["instructions"]  e.g. /dock role 1 backend "use REST"' }
+      const slot = parseInt(numMatch[1]!, 10) - 1
+      if (slot < 0 || slot >= 100) return { text: 'Slot must be 1–100.' }
+      const remainder = numMatch[2]!.trim()
+      const instrMatch = remainder.match(/^(.*?)\s*"([^"]*)"$/)
+      const roleName = instrMatch ? instrMatch[1]!.trim() : remainder
+      const instructions = instrMatch ? instrMatch[2]! : ''
+      await update($, dockAtom, s => {
+        const roles = [...s.roles]
+        while (roles.length <= slot) roles.push({ name: '', instructions: '' })
+        roles[slot] = { name: roleName, instructions }
+        return { ...s, roles }
+      })
+      try {
+        const s2 = await read($, dockAtom)
+        await $.store.set({ key: 'dock-roles', value: s2.roles })
+      } catch { /* ignore */ }
+      return { text: `Agent ${slot + 1}: ${roleName}${instructions ? ` — "${instructions}"` : ''}` }
+    }
 
     // /dock N — set size
     if (args !== '') {
@@ -216,7 +246,12 @@ export function registerDock(on: On): void {
       stuckCount: 0,
     }))
 
-    const instruction = splitInstruction(teamSize, state.helperModel)
+    // Build per-slot roles, cycling if fewer defined than teamSize
+    const { roles, helperModel } = state
+    const effectiveRoles = Array.from({ length: teamSize }, (_, i) =>
+      roles.length > 0 ? (roles[i % roles.length] ?? { name: '', instructions: '' }) : { name: '', instructions: '' }
+    )
+    const instruction = splitInstructionWithRoles(teamSize, effectiveRoles, helperModel)
     return next({ ...e, context: [...(e.context ?? []), instruction] })
   })
 
@@ -258,10 +293,14 @@ export function registerDock(on: On): void {
       return { deny: `Team Size is ${teamSize}: this request already has ${teamSize} helpers. Finish with the helpers you have.` }
     }
 
-    // Add queued card
+    // Add queued card — use assigned role if available
     const cardId = e.tool_use_id
-    const desc = e.description || `Helper ${turnAgentCount}`
-    const inits = initials(desc)
+    const slotIndex = turnAgentCount - 1
+    const roleForSlot = state.roles.length > 0
+      ? (state.roles[slotIndex % state.roles.length] ?? { name: '', instructions: '' })
+      : { name: '', instructions: '' }
+    const desc = roleForSlot.name || e.description || `Helper ${turnAgentCount}`
+    const inits = roleForSlot.name ? roleInitials(roleForSlot.name) : initials(desc)
     const color = colorFor(inits)
     const helper: Helper = {
       id: cardId,
@@ -407,7 +446,7 @@ export function registerDock(on: On): void {
     const tick = (await read($, tickAtom)) ?? 0
     const nowMs = await $.clock.now()
     const cols = e.props.bodyColumns
-    const { teamSize, helpers, phase, job, jobStartMs, jobEndMs, pendingBigTeam, helperModel } = state
+    const { teamSize, helpers, phase, job, jobStartMs, jobEndMs, pendingBigTeam, helperModel, roles } = state
 
     // ── Big team confirmation ──────────────────────────────────────────────
     if (pendingBigTeam !== null) {
@@ -538,11 +577,15 @@ export function registerDock(on: On): void {
         return c === i ? '◆' : '◇'
       }).join(' ')
 
+      const assignedRoles = roles.filter(r => r.name).map(r => r.name)
       return (
         <Box flexDirection="column" paddingX={1} gap={1}>
           <Text dimColor>{seatChars}</Text>
           <Text>Your team of {teamSize} is standing by</Text>
-          <Text dimColor>Send a request and it splits across {teamSize} helpers.</Text>
+          {assignedRoles.length > 0
+            ? <Text dimColor>Specialists: {assignedRoles.join(' · ')}</Text>
+            : <Text dimColor>Send a request and it splits across {teamSize} helpers.</Text>
+          }
         </Box>
       )
     }
@@ -581,6 +624,48 @@ export function registerDock(on: On): void {
           <Text dimColor>Helpers: </Text>
           <Button key="model" label={helperModel === 'haiku' ? 'Fast & Cheap ✓' : 'Same model as you ✓'} onPress={toggleModel} />
         </Box>
+
+        {/* Role assignment (only when team > 1) */}
+        {teamSize > 1 && (
+          <Box flexDirection="column">
+            <Text dimColor>{'─'.repeat(cols - 3)}</Text>
+            <Text dimColor>R O L E S  (optional — click to cycle)</Text>
+            {Array.from({ length: Math.min(teamSize, 10) }, (_, i) => {
+              const role = roles[i] ?? { name: '', instructions: '' }
+              const cycleRole = async () => {
+                const nextName = nextRole(role.name)
+                await update($, dockAtom, s => {
+                  const r = [...s.roles]
+                  while (r.length <= i) r.push({ name: '', instructions: '' })
+                  r[i] = { ...r[i]!, name: nextName }
+                  return { ...s, roles: r }
+                })
+                try {
+                  const s2 = await read($, dockAtom)
+                  await $.store.set({ key: 'dock-roles', value: s2.roles })
+                } catch { /* ignore */ }
+              }
+              return (
+                <Box key={`role-${i}`} flexDirection="row" gap={1}>
+                  <Text dimColor>#{i + 1}</Text>
+                  <Button key={`r-${i}`} label={role.name ? `← ${role.name} →` : '← None →'} onPress={cycleRole} />
+                  {role.instructions && (
+                    <Text dimColor>"{role.instructions.length > 22 ? role.instructions.slice(0, 21) + '…' : role.instructions}"</Text>
+                  )}
+                </Box>
+              )
+            })}
+            {teamSize > 10 && (
+              <Text dimColor>  + {teamSize - 10} more slots cycle through the roles above</Text>
+            )}
+            {roles.some(r => r.name) && (
+              <Button key="clear-roles" label="Clear all roles" onPress={async () => {
+                await update($, dockAtom, s => ({ ...s, roles: [] }))
+                try { await $.store.set({ key: 'dock-roles', value: [] }) } catch { /* ignore */ }
+              }} />
+            )}
+          </Box>
+        )}
 
         <Text dimColor>{'─'.repeat(cols - 3)}</Text>
 

@@ -91,3 +91,48 @@ export function overallPct(helpers: Array<{ pct: number; status: string }>): num
   const sum = helpers.reduce((a, h) => a + (h.status === 'done' ? 100 : h.pct), 0)
   return Math.round(sum / helpers.length)
 }
+
+export const ROLE_PRESETS = [
+  'Backend', 'Frontend', 'Tester', 'ML Engineer', 'DevOps',
+  'Data Analyst', 'Researcher', 'Writer', 'Architect', 'Security', 'Designer',
+]
+
+export function nextRole(current: string): string {
+  if (!current) return ROLE_PRESETS[0]!
+  const i = ROLE_PRESETS.indexOf(current)
+  if (i === -1 || i === ROLE_PRESETS.length - 1) return ''
+  return ROLE_PRESETS[i + 1]!
+}
+
+export function roleInitials(role: string): string {
+  const map: Record<string, string> = {
+    'Backend': 'BE', 'Frontend': 'FE', 'Tester': 'QA', 'ML Engineer': 'ML',
+    'DevOps': 'DV', 'Data Analyst': 'DA', 'Researcher': 'RE', 'Writer': 'WR',
+    'Architect': 'AR', 'Security': 'SC', 'Designer': 'DS',
+  }
+  return map[role] ?? initials(role)
+}
+
+export function splitInstructionWithRoles(
+  n: number,
+  roles: Array<{ name: string; instructions: string }>,
+  helperModel: 'haiku' | 'same',
+): string {
+  const hasRoles = roles.some(r => r.name)
+  if (!hasRoles) return splitInstruction(n, helperModel)
+  const modelNote = helperModel === 'haiku' ? '\nHelper agents will run on a fast cheap model.' : ''
+  const roleLines = roles.map((r, i) => {
+    const roleName = r.name || `Helper ${i + 1}`
+    const noteStr = r.instructions ? ` Special instructions: "${r.instructions}"` : ''
+    return `  - Agent ${i + 1} (${roleName}): approach from the ${roleName} perspective.${noteStr}`
+  }).join('\n')
+  return `## Agent Dock — split this request across exactly ${n} specialists
+
+Rules (follow precisely):
+- Launch exactly ${n} Agent tool calls in ONE message so they run in parallel.
+- Assign each agent its specialist role:
+${roleLines}
+- In each agent's prompt include: "As you work, call report_progress with your task name and a percent at about 25, 50, 75 and 100. Do not call plan_steps."
+- When all agents finish, combine their results into one unified answer.
+- Never argue the request cannot be split. Never pad with useless work.${modelNote}`.trim()
+}
