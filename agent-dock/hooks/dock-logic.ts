@@ -136,3 +136,29 @@ ${roleLines}
 - When all agents finish, combine their results into one unified answer.
 - Never argue the request cannot be split. Never pad with useless work.${modelNote}`.trim()
 }
+
+export function teamInstructionWithRoles(
+  n: number,
+  roles: Array<{ name: string; instructions: string }>,
+  helperModel: 'haiku' | 'same',
+): string {
+  const modelNote = helperModel === 'haiku' ? '\nHelper agents will run on a fast cheap model.' : ''
+  const steps = roles.slice(0, n).map((r, i) => {
+    const roleName = r.name || `Agent ${i + 1}`
+    const noteStr = r.instructions ? ` Special instructions: "${r.instructions}".` : ''
+    const context = i === 0
+      ? ''
+      : i === 1
+        ? ` Include the previous agent's full output as context in the prompt.`
+        : ` Include all previous agents' full outputs as context in the prompt.`
+    return `  ${i + 1}. Spawn Agent ${i + 1} (${roleName}).${noteStr}${context} Its prompt must include: "As you work, call report_progress with your task name and a percent at about 25, 50, 75 and 100. Do not call plan_steps."`
+  }).join('\n')
+  return `## Agent Dock — TEAM MODE: run ${n} specialists in sequence, each building on the last
+
+Rules (follow precisely):
+- Run agents ONE AT A TIME in this order — do NOT spawn in parallel:
+${steps}
+- After all ${n} agents finish, synthesize their combined outputs into one unified answer.
+- Each agent's output feeds into the next — this is a dependency chain, not parallel work.
+- Never argue the request cannot be chained. Never pad with useless work.${modelNote}`.trim()
+}

@@ -20,6 +20,7 @@ export interface Helper {
 export interface DockState {
   teamSize: number
   helperModel: 'haiku' | 'same'
+  mode: 'parallel' | 'team'
   job: string
   helpers: Helper[]
   phase: DockPhase

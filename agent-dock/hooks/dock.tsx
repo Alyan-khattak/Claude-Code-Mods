@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { On } from 'claude-code'
 import {
   parseSize, jobName, initials, colorFor,
-  splitInstructionWithRoles, nextRole, roleInitials,
+  splitInstructionWithRoles, teamInstructionWithRoles, nextRole, roleInitials,
   nudgeText, badgeText, summaryLine,
   meterBar, fmtTime, fmtTimer, overallPct,
 } from './dock-logic'
@@ -26,9 +26,11 @@ type Helper = {
   endMs: number | null
 }
 type DockPhase = 'idle' | 'live' | 'done'
+type DockMode = 'parallel' | 'team'
 type DockState = {
   teamSize: number
   helperModel: 'haiku' | 'same'
+  mode: DockMode
   job: string
   helpers: Helper[]
   phase: DockPhase
@@ -45,6 +47,7 @@ type DockState = {
 const dockAtom = atom({ plugin: 'agent-dock', key: 'dock' } as const, {
   teamSize: 1,
   helperModel: 'haiku' as const,
+  mode: 'parallel' as DockMode,
   job: '',
   helpers: [] as Helper[],
   phase: 'idle' as DockPhase,
@@ -107,12 +110,14 @@ export function registerDock(on: On): void {
       const size = await $.store.get({ key: 'dock-team-size' })
       const hm = await $.store.get({ key: 'dock-helper-model' })
       const storedRoles = await $.store.get({ key: 'dock-roles' })
+      const storedMode = await $.store.get({ key: 'dock-mode' })
       const storedSize = typeof size?.value === 'number' ? size.value : 1
       // Big team sizes (>20) never carry over
       const safeSize = storedSize > 20 ? 1 : storedSize
       const helperModel = hm?.value === 'same' ? 'same' as const : 'haiku' as const
+      const mode: DockMode = storedMode?.value === 'team' ? 'team' : 'parallel'
       const roles = Array.isArray(storedRoles?.value) ? storedRoles.value as AgentRole[] : []
-      await update($, dockAtom, s => ({ ...s, teamSize: safeSize, helperModel, roles }))
+      await update($, dockAtom, s => ({ ...s, teamSize: safeSize, helperModel, mode, roles }))
     } catch { /* keep defaults */ }
 
     try {
@@ -133,6 +138,15 @@ export function registerDock(on: On): void {
   on('command.run', { command: 'dock' }, async ($, e) => {
     const args = (e.args ?? '').trim()
     const state = await read($, dockAtom)
+
+    // /dock parallel | /dock team — switch mode
+    if (args === 'parallel' || args === 'team') {
+      const mode: DockMode = args
+      await update($, dockAtom, s => ({ ...s, mode }))
+      try { await $.store.set({ key: 'dock-mode', value: mode }) } catch { /* ignore */ }
+      $.ui.toast(`Mode: ${mode === 'team' ? '🔗 Team (sequential)' : '⚡ Parallel'}`)
+      return { text: `Dock mode set to ${mode}.` }
+    }
 
     // /dock role N name ["instructions"] — assign role to a slot
     if (args.startsWith('role ')) {
@@ -248,11 +262,13 @@ export function registerDock(on: On): void {
     }))
 
     // Build per-slot roles, cycling if fewer defined than teamSize
-    const { roles, helperModel } = state
+    const { roles, helperModel, mode } = state
     const effectiveRoles = Array.from({ length: teamSize }, (_, i) =>
       roles.length > 0 ? (roles[i % roles.length] ?? { name: '', instructions: '' }) : { name: '', instructions: '' }
     )
-    const instruction = splitInstructionWithRoles(teamSize, effectiveRoles, helperModel)
+    const instruction = mode === 'team'
+      ? teamInstructionWithRoles(teamSize, effectiveRoles, helperModel)
+      : splitInstructionWithRoles(teamSize, effectiveRoles, helperModel)
     return next({ ...e, context: [...(e.context ?? []), instruction] })
   })
 
@@ -447,7 +463,7 @@ export function registerDock(on: On): void {
     const tick = (await read($, tickAtom)) ?? 0
     const nowMs = await $.clock.now()
     const cols = e.props.bodyColumns
-    const { teamSize, helpers, phase, job, jobStartMs, jobEndMs, pendingBigTeam, helperModel, roles } = state
+    const { teamSize, helpers, phase, job, jobStartMs, jobEndMs, pendingBigTeam, helperModel, mode, roles } = state
 
     // ── Big team confirmation ──────────────────────────────────────────────
     if (pendingBigTeam !== null) {
@@ -508,9 +524,18 @@ export function registerDock(on: On): void {
       try { await $.store.set({ key: 'dock-helper-model', value: next }) } catch { /* ignore */ }
     }
 
+    const toggleMode = async () => {
+      const next: DockMode = mode === 'parallel' ? 'team' : 'parallel'
+      await update($, dockAtom, s => ({ ...s, mode: next }))
+      try { await $.store.set({ key: 'dock-mode', value: next }) } catch { /* ignore */ }
+      $.ui.toast(next === 'team' ? 'Team mode: agents chain in sequence' : 'Parallel mode: agents run at once')
+    }
+
     const infoLine = teamSize === 1
       ? 'Claude decides how many helpers'
-      : `Splits each request across ${teamSize} helpers  ·  ${Math.min(teamSize, MAX_CONCURRENT)} at a time  ·  ${helperModel === 'haiku' ? 'Fast & Cheap' : 'Same model as you'}`
+      : mode === 'team'
+        ? `Chains ${teamSize} specialists in sequence — each builds on the last`
+        : `Splits each request across ${teamSize} helpers  ·  ${Math.min(teamSize, MAX_CONCURRENT)} at a time  ·  ${helperModel === 'haiku' ? 'Fast & Cheap' : 'Same model as you'}`
 
     const working = helpers.filter(h => h.status === 'working').length
     const queued = helpers.filter(h => h.status === 'queued').length
@@ -590,7 +615,7 @@ export function registerDock(on: On): void {
           <Text>Your team of {teamSize} is standing by</Text>
           {assignedRoles.length > 0
             ? <Text dimColor>Specialists: {assignedRoles.join(' · ')}</Text>
-            : <Text dimColor>Send a request and it splits across {teamSize} helpers.</Text>
+            : <Text dimColor>Send a request and it {mode === 'team' ? 'chains through' : 'splits across'} {teamSize} helpers.</Text>
           }
         </Box>
       )
@@ -624,7 +649,18 @@ export function registerDock(on: On): void {
           {sizeButtons}
         </Box>
         <Text dimColor>{infoLine}</Text>
-        <Text dimColor>  No keys? Ctrl+X then Tab to focus · 1 3 5 t w f c for size · m for model</Text>
+        <Text dimColor>  No keys? Ctrl+X then Tab to focus · 1 3 5 t w f c for size · m model · x mode</Text>
+
+        {/* Mode toggle */}
+        <Box flexDirection="row" gap={1}>
+          <Text dimColor>Mode:    </Text>
+          <Button key="mode-parallel" hotkey="x"
+            label={mode === 'parallel' ? '⚡ Parallel ✓' : '⚡ Parallel'}
+            onPress={toggleMode} />
+          <Button key="mode-team"
+            label={mode === 'team' ? '🔗 Team ✓' : '🔗 Team'}
+            onPress={toggleMode} />
+        </Box>
 
         {/* Model toggle */}
         <Box flexDirection="row" gap={1}>
