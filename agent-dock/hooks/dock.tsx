@@ -247,19 +247,19 @@ export function registerDock(on: On): void {
     turnAgentCount = 0
     nudgeSentThisTurn = false
 
-    if (teamSize <= 1) return next(e)
-
     const job = jobName(e.text)
     const now = await $.clock.now()
     await update($, dockAtom, s => ({
       ...s,
       job,
       helpers: [],
-      phase: 'live',
+      phase: 'idle',
       jobStartMs: now,
       jobEndMs: null,
       stuckCount: 0,
     }))
+
+    if (teamSize <= 1) return next(e)
 
     // Build per-slot roles, cycling if fewer defined than teamSize
     const { roles, helperModel, mode } = state
@@ -301,19 +301,18 @@ export function registerDock(on: On): void {
 
     const state = await read($, dockAtom)
     const { teamSize, helperModel } = state
-    if (teamSize <= 1) return next(e)
 
     turnAgentCount++
 
-    // Cap check
-    if (turnAgentCount > teamSize) {
+    // Cap check only when team size is explicit
+    if (teamSize > 1 && turnAgentCount > teamSize) {
       return { deny: `Team Size is ${teamSize}: this request already has ${teamSize} helpers. Finish with the helpers you have.` }
     }
 
-    // Add queued card — use assigned role if available
+    // Add queued card — use assigned role if available (only meaningful when teamSize > 1)
     const cardId = e.tool_use_id
     const slotIndex = turnAgentCount - 1
-    const roleForSlot = state.roles.length > 0
+    const roleForSlot = teamSize > 1 && state.roles.length > 0
       ? (state.roles[slotIndex % state.roles.length] ?? { name: '', instructions: '' })
       : { name: '', instructions: '' }
     const desc = roleForSlot.name || e.description || `Helper ${turnAgentCount}`
@@ -329,7 +328,11 @@ export function registerDock(on: On): void {
       startMs: null,
       endMs: null,
     }
-    await update($, dockAtom, s => ({ ...s, helpers: [...s.helpers, helper] }))
+    await update($, dockAtom, s => ({
+      ...s,
+      helpers: [...s.helpers, helper],
+      phase: s.phase === 'idle' ? 'live' : s.phase,
+    }))
 
     // Queue while over concurrent limit
     while (activeCount >= MAX_CONCURRENT) {
@@ -399,36 +402,34 @@ export function registerDock(on: On): void {
     const state = await read($, dockAtom)
     const { teamSize, job, jobStartMs } = state
 
-    if (teamSize > 1) {
-      const nowMs = await $.clock.now()
-      const durationMs = jobStartMs !== null ? nowMs - jobStartMs : 0
+    const nowMs = await $.clock.now()
+    const durationMs = jobStartMs !== null ? nowMs - jobStartMs : 0
 
-      if (turnAgentCount > 0 && turnAgentCount < teamSize && !nudgeSentThisTurn) {
-        nudgeSentThisTurn = true
-        void $.prompt.submit({ text: nudgeText(turnAgentCount, teamSize) })
-      }
-
-      if (turnAgentCount > 0) {
-        await update($, dockAtom, s => ({
-          ...s,
-          phase: 'done' as DockPhase,
-          jobEndMs: nowMs,
-          helpers: s.helpers.map(h =>
-            h.status === 'queued' || h.status === 'working'
-              ? { ...h, status: 'done' as HelperStatus, pct: 100 }
-              : h,
-          ),
-        }))
-        clockCancel?.()
-        clockCancel = undefined
-        const finalState = await read($, dockAtom)
-        $.ui.toast(summaryLine(finalState.helpers.length, job, durationMs, finalState.stuckCount))
-        $.ui.status(undefined)
-      } else {
-        await update($, dockAtom, s => ({ ...s, phase: 'idle' }))
-      }
-      void writeStatusFile($)
+    if (teamSize > 1 && turnAgentCount > 0 && turnAgentCount < teamSize && !nudgeSentThisTurn) {
+      nudgeSentThisTurn = true
+      void $.prompt.submit({ text: nudgeText(turnAgentCount, teamSize) })
     }
+
+    if (turnAgentCount > 0) {
+      await update($, dockAtom, s => ({
+        ...s,
+        phase: 'done' as DockPhase,
+        jobEndMs: nowMs,
+        helpers: s.helpers.map(h =>
+          h.status === 'queued' || h.status === 'working'
+            ? { ...h, status: 'done' as HelperStatus, pct: 100 }
+            : h,
+        ),
+      }))
+      clockCancel?.()
+      clockCancel = undefined
+      const finalState = await read($, dockAtom)
+      $.ui.toast(summaryLine(finalState.helpers.length, job, durationMs, finalState.stuckCount))
+      $.ui.status(undefined)
+    } else {
+      await update($, dockAtom, s => ({ ...s, phase: 'idle' }))
+    }
+    void writeStatusFile($)
 
     return next(e)
   })
