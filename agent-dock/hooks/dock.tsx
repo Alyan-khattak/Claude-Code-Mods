@@ -170,7 +170,7 @@ export function registerDock(on: On): void {
           try {
             const panes = await $.ui.panes()
             if (!panes.some(p => p.id === PANE)) {
-              const res = await $.ui.open({ id: PANE, title: 'Agent Dock', closeOnEscape: true, columns: 54 })
+              const res = await $.ui.open({ id: PANE, title: 'Agent Dock', focus: true, closeOnEscape: true, columns: 54 })
               if (!res.isPlaced) $.ui.toast('Widen the window to see Agent Dock.')
             }
           } catch { /* ignore */ }
@@ -184,7 +184,7 @@ export function registerDock(on: On): void {
         try {
           const panes = await $.ui.panes()
           if (!panes.some(p => p.id === PANE)) {
-            const res = await $.ui.open({ id: PANE, title: 'Agent Dock', closeOnEscape: true, columns: 54 })
+            const res = await $.ui.open({ id: PANE, title: 'Agent Dock', focus: true, closeOnEscape: true, columns: 54 })
             if (!res.isPlaced) $.ui.toast('Widen the window to see Agent Dock.')
           }
         } catch { /* ignore */ }
@@ -202,7 +202,7 @@ export function registerDock(on: On): void {
           await update($, dockAtom, s => ({ ...s, isFolded: true }))
         } else {
           await update($, dockAtom, s => ({ ...s, isFolded: false }))
-          const res = await $.ui.open({ id: PANE, title: 'Agent Dock', closeOnEscape: true, columns: 54 })
+          const res = await $.ui.open({ id: PANE, title: 'Agent Dock', focus: true, closeOnEscape: true, columns: 54 })
           if (!res.isPlaced) $.ui.toast('The window is too narrow to show the Agent Dock. Widen it or watch the status bar.')
         }
       } catch { /* ignore */ }
@@ -217,8 +217,9 @@ export function registerDock(on: On): void {
 
   // ── ui.close — pane closed (X or ESC) ─────────────────────────────────────
   on('ui.close', { id: PANE }, async ($, e, next) => {
+    const result = await next(e)
     await update($, dockAtom, s => ({ ...s, isFolded: true }))
-    return next(e)
+    return result
   })
 
   // ── prompt.submit — inject split instruction ───────────────────────────────
@@ -476,8 +477,10 @@ export function registerDock(on: On): void {
     }
 
     // ── Team size presets ──────────────────────────────────────────────────
+    // hotkeys: 1 3 5 t(en) w(enty) f(ifty) c(entury)
     const SIZES = [1, 3, 5, 10, 20, 50, 100]
-    const sizeButtons = SIZES.map(n => {
+    const SIZE_KEYS = ['1', '3', '5', 't', 'w', 'f', 'c'] as const
+    const sizeButtons = SIZES.map((n, idx) => {
       const setSize = async () => {
         if (n > 20) {
           await update($, dockAtom, s => ({ ...s, pendingBigTeam: n }))
@@ -485,12 +488,15 @@ export function registerDock(on: On): void {
         }
         await update($, dockAtom, s => ({ ...s, teamSize: n, pendingBigTeam: null }))
         try { await $.store.set({ key: 'dock-team-size', value: n }) } catch { /* ignore */ }
+        $.ui.toast(`Team size: ${n}`)
       }
       const isActive = teamSize === n
       return (
         <Button
           key={`sz-${n}`}
           label={isActive ? `[${n}]` : ` ${n} `}
+          hotkey={SIZE_KEYS[idx]}
+          {...(isActive ? { autoFocus: true as const } : {})}
           onPress={setSize}
         />
       )
@@ -618,18 +624,20 @@ export function registerDock(on: On): void {
           {sizeButtons}
         </Box>
         <Text dimColor>{infoLine}</Text>
+        <Text dimColor>  No keys? Ctrl+X then Tab to focus · 1 3 5 t w f c for size · m for model</Text>
 
         {/* Model toggle */}
         <Box flexDirection="row" gap={1}>
           <Text dimColor>Helpers: </Text>
-          <Button key="model" label={helperModel === 'haiku' ? 'Fast & Cheap ✓' : 'Same model as you ✓'} onPress={toggleModel} />
+          <Button key="model" hotkey="m" label={helperModel === 'haiku' ? 'Fast & Cheap ✓' : 'Same model as you ✓'} onPress={toggleModel} />
         </Box>
 
         {/* Role assignment (only when team > 1) */}
         {teamSize > 1 && (
           <Box flexDirection="column">
             <Text dimColor>{'─'.repeat(cols - 3)}</Text>
-            <Text dimColor>R O L E S  (optional — click to cycle)</Text>
+            <Text dimColor>R O L E S  (optional)</Text>
+            <Text dimColor>  Click preset  or  type: /dock role N "your role" ["instructions"]</Text>
             {Array.from({ length: Math.min(teamSize, 10) }, (_, i) => {
               const role = roles[i] ?? { name: '', instructions: '' }
               const cycleRole = async () => {
@@ -645,18 +653,22 @@ export function registerDock(on: On): void {
                   await $.store.set({ key: 'dock-roles', value: s2.roles })
                 } catch { /* ignore */ }
               }
+              const editHint = () => {
+                $.ui.toast(`Type: /dock role ${i + 1} "your role name" (optionally add "instructions" at end)`)
+              }
               return (
                 <Box key={`role-${i}`} flexDirection="row" gap={1}>
                   <Text dimColor>#{i + 1}</Text>
-                  <Button key={`r-${i}`} label={role.name ? `← ${role.name} →` : '← None →'} onPress={cycleRole} />
+                  <Button key={`r-${i}`} label={role.name ? `← ${role.name} →` : '← preset →'} onPress={cycleRole} />
+                  <Button key={`e-${i}`} label="✏" onPress={editHint} />
                   {role.instructions && (
-                    <Text dimColor>"{role.instructions.length > 22 ? role.instructions.slice(0, 21) + '…' : role.instructions}"</Text>
+                    <Text dimColor>"{role.instructions.length > 20 ? role.instructions.slice(0, 19) + '…' : role.instructions}"</Text>
                   )}
                 </Box>
               )
             })}
             {teamSize > 10 && (
-              <Text dimColor>  + {teamSize - 10} more slots cycle through the roles above</Text>
+              <Text dimColor>  + {teamSize - 10} more — use /dock role N to assign beyond #10</Text>
             )}
             {roles.some(r => r.name) && (
               <Button key="clear-roles" label="Clear all roles" onPress={async () => {
